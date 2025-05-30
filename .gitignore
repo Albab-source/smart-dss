@@ -1,4 +1,42 @@
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
+
+# Virtual environment
+venv/
+env/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.eggs/
+
+# PyInstaller
+*.spec
+
+# Log files
+*.log
+
+# dotenv environment variable files
+.env
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# SQLite DB (optional)
+*.sqlite3
+
+# Firebase admin SDK private keys or configs
+firebase-adminsdk-*.json
+
+# macOS
+.DS_Store
