@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSS Metode SMART</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script type="module" src="{{ url_for('static', path='js/script.js') }}" defer></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .modal-overlay { background-color: rgba(0,0,0,0.5); }
+        .calculation-details table, #csvMappingCriteriaTable, #csvPreviewTable { width: 100%; margin-bottom: 1rem; }
+        .calculation-details th, .calculation-details td, 
+        #csvMappingCriteriaTable th, #csvMappingCriteriaTable td,
+        #csvPreviewTable th, #csvPreviewTable td { 
+            border: 1px solid #e2e8f0; 
+            padding: 0.5rem 0.75rem; 
+            text-align: left; 
+            font-size: 0.875rem;
+        }
+        .calculation-details th, #csvMappingCriteriaTable th, #csvPreviewTable th { 
+            background-color: #f7fafc; font-weight: 600; 
+        }
+        #csvMappingInterface label { margin-bottom: 0.25rem; display: block; }
+        #csvMappingInterface input[type="text"], 
+        #csvMappingInterface input[type="number"], 
+        #csvMappingInterface select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+        #csvMappingInterface .criteria-row > div { padding: 0.25rem; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 p-4 sm:p-6 md:p-8">
+    <div class="container mx-auto max-w-6xl">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl sm:text-4xl font-bold text-blue-600">Decision Support System (DSS)</h1>
+            <p class="text-gray-600 mt-1 text-sm sm:text-base">Menggunakan Metode SMART</p>
+            <p id="userIdDisplay" class="text-xs text-gray-500 mt-2"></p>
+        </header>
+
+        <section id="csvImportSection" class="bg-white p-6 rounded-xl shadow-lg mb-8">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Unggah & Konfigurasi Data dari CSV</h2>
+            <p class="text-sm text-gray-500 mb-3">Impor data CSV untuk mendefinisikan alternatif dan kriteria. Data yang ada akan diganti.</p>
+            <div>
+                <label for="csvFileInputConfig" class="block text-sm font-medium text-gray-700 mb-1">Pilih File CSV:</label>
+                <input type="file" id="csvFileInputConfig" accept=".csv" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+            </div>
+            
+            <div id="csvMappingInterface" class="hidden mt-6">
+                <h3 class="text-lg font-semibold text-gray-700 mb-3">Konfigurasi Data CSV</h3>
+                
+                <div class="mb-4">
+                    <h4 class="text-md font-semibold text-gray-600 mb-2">Pratinjau Data (5 baris pertama):</h4>
+                    <div id="csvPreviewContainer" class="overflow-x-auto max-h-60 border rounded-md">
+                        <table id="csvPreviewTable">
+                            <thead></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="alternativeColumnSelect" class="text-sm font-medium text-gray-700">Pilih Kolom untuk Alternatif:</label>
+                    <select id="alternativeColumnSelect" class="mt-1"></select>
+                </div>
+
+                <div class="mb-4">
+                    <h4 class="text-md font-semibold text-gray-600 mb-2">Pilih dan Konfigurasi Kolom untuk Kriteria:</h4>
+                    <div id="csvCriteriaMappingContainer" class="overflow-x-auto">
+                        <table id="csvMappingCriteriaTable">
+                            <thead>
+                                <tr>
+                                    <th class="w-1/12">Gunakan?</th>
+                                    <th class="w-2/12">Header CSV</th>
+                                    <th class="w-3/12">Nama Kriteria</th>
+                                    <th class="w-2/12">Tipe</th>
+                                    <th class="w-2/12">Bobot (%)</th>
+                                    <th class="w-2/12">Satuan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="flex gap-4 mt-4">
+                    <button onclick="processMappedCSV()" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-md transition duration-150">
+                        Proses & Gunakan Data CSV Ini
+                    </button>
+                    <button onclick="cancelCSVImport()" class="flex-1 bg-gray-400 hover:bg-gray-500 text-white font-medium py-2 px-4 rounded-md transition duration-150">
+                        Batal
+                    </button>
+                </div>
+            </div>
+        </section>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <section class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">1. Input Kriteria Manual</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label for="criterionName" class="block text-sm font-medium text-gray-700 mb-1">Nama Kriteria:</label>
+                        <input type="text" id="criterionName" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="criterionType" class="block text-sm font-medium text-gray-700 mb-1">Jenis Kriteria:</label>
+                        <select id="criterionType" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            <option value="benefit">Benefit (Semakin besar semakin baik)</option>
+                            <option value="cost">Cost (Semakin kecil semakin baik)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="criterionWeight" class="block text-sm font-medium text-gray-700 mb-1">Bobot Kriteria (%):</label>
+                        <input type="number" id="criterionWeight" placeholder="Contoh: 40" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="criterionUnit" class="block text-sm font-medium text-gray-700 mb-1">Satuan Kriteria (Opsional):</label>
+                        <input type="text" id="criterionUnit" placeholder="Contoh: Rp, GB, Kg" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <button onclick="addCriterion()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md transition duration-150">
+                        Tambah Kriteria
+                    </button>
+                </div>
+                <div class="mt-6 overflow-x-auto">
+                    <h3 class="text-md font-semibold text-gray-700 mb-2">Daftar Kriteria:</h3>
+                    <table class="min-w-full bg-white">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="py-2 px-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nama</th>
+                                <th class="py-2 px-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Jenis</th>
+                                <th class="py-2 px-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Bobot</th>
+                                <th class="py-2 px-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Satuan</th>
+                                <th class="py-2 px-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="criteriaTableBody">
+                            </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">2. Input Alternatif Manual</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label for="alternativeName" class="block text-sm font-medium text-gray-700 mb-1">Nama Alternatif:</label>
+                        <input type="text" id="alternativeName" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <button onclick="addAlternative()" class="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-md transition duration-150">
+                        Tambah Alternatif Manual
+                    </button>
+                </div>
+                 <div class="mt-6 overflow-x-auto">
+                    <h3 class="text-md font-semibold text-gray-700 mb-2">Daftar Alternatif:</h3>
+                    <table class="min-w-full bg-white">
+                         <thead class="bg-gray-50">
+                            <tr>
+                                <th class="py-2 px-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nama</th>
+                                <th class="py-2 px-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="alternativesTableBody"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <section class="bg-white p-6 rounded-xl shadow-lg mb-8">
+            <h2 id="valuesSectionTitle" class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">3. Input Nilai Alternatif</h2>
+            <div class="overflow-x-auto">
+                <table id="valuesTable" class="min-w-full bg-white hidden">
+                    <thead></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="bg-white p-6 rounded-xl shadow-lg">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">4. Perhitungan & Hasil</h2>
+            <div class="mb-4">
+                <label for="showCalculationDetails" class="flex items-center cursor-pointer">
+                    <input type="checkbox" id="showCalculationDetails" class="form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                    <span class="ml-2 text-sm text-gray-700">Tampilkan Detail Proses Perhitungan</span>
+                </label>
+            </div>
+            <button onclick="calculateSMART()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-md transition duration-150 text-lg mb-6">
+                Hitung Peringkat (SMART)
+            </button>
+            <div id="calculationDetailsContainer" class="calculation-details hidden mt-6">
+                <h3 class="text-lg font-semibold text-gray-700 mb-3">Detail Proses Perhitungan:</h3>
+                <div id="normalizedValuesSection">
+                    <h4 class="text-md font-semibold text-gray-600 mb-2">Langkah 1: Tabel Nilai Normalisasi (Utility)</h4>
+                    <div id="normalizedValuesTableContainer" class="overflow-x-auto"></div>
+                </div>
+                <div id="weightedNormalizedValuesSection" class="mt-4">
+                     <h4 class="text-md font-semibold text-gray-600 mb-2">Langkah 2: Tabel Nilai Normalisasi Terbobot</h4>
+                    <div id="weightedNormalizedValuesTableContainer" class="overflow-x-auto"></div>
+                </div>
+            </div>
+            <div id="resultsContainer" class="overflow-x-auto hidden mt-6">
+                <h3 class="text-lg font-semibold text-gray-700 mb-2">Hasil Peringkat Akhir:</h3>
+                <table id="resultsTable" class="min-w-full bg-white">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="py-2 px-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider rounded-tl-lg">Peringkat</th>
+                            <th class="py-2 px-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Alternatif</th>
+                            <th class="py-2 px-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider rounded-tr-lg">Skor Akhir</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+        <footer class="mt-12 text-center text-sm text-gray-500">
+            <p>&copy; <span id="currentYear"></span> Aplikasi DSS Sederhana. Dibuat dengan Tailwind CSS & Firebase.</p>
+        </footer>
+        <script>document.getElementById('currentYear').textContent = new Date().getFullYear();</script>
+    </div>
+
+    <div id="infoModal" class="fixed inset-0 modal-overlay flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+            <h4 class="text-lg font-semibold text-gray-800 mb-3">Informasi</h4>
+            <p id="modalMessage" class="text-gray-600 text-sm mb-4">Pesan modal di sini.</p>
+            <button onclick="closeModal()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md transition duration-150">
+                Tutup
+            </button>
+        </div>
+    </div>
+</body>
+</html>
